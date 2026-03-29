@@ -1,0 +1,47 @@
+name: Nawah Agent DevOps
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  qa-auto-fix:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install tools
+      run: |
+        pip install black isort autoflake pylint bandit
+
+    - name: Auto-format with Black
+      run: black .
+
+    - name: Sort imports with isort
+      run: isort .
+
+    - name: Autoflake — remove unused
+      run: |
+        autoflake --in-place --remove-unused-variables --remove-all-unused-imports $(find . -name "*.py")
+
+    - name: Run linting (Pylint report)
+      run: |
+        for file in $(find . -name "*.py"); do
+          pylint "$file" || true
+        done
+
+    - name: Security scan (Bandit)
+      run: bandit -r . || true
+
+    - name: Commit auto-fixes
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "🤖 Auto format/fix/code analysis by agent"
